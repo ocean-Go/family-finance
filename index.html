@@ -665,7 +665,38 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // Categories
+        // ==================== Supabase 配置 ====================
+        const SUPABASE_URL = 'https://nlzqtcdavheklvrlzloq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5senF0Y2Rhdmhla2x2cmx6bG9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMxODgyMzcsImV4cCI6MjA2ODc2NDIzN30.aLL5OiAAxsyqH_3VvW9dC_ZwjrbXFvnZ_yNcDnZAAvQ';
+        
+        // Supabase Client (Simple REST wrapper)
+        const supabase = {
+            async from(table) {
+                return {
+                    select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }),
+                    insert: async (data) => {
+                        try {
+                            const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+                                method: 'POST',
+                                headers: {
+                                    'apikey': SUPABASE_KEY,
+                                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                                    'Content-Type': 'application/json',
+                                    'Prefer': 'return=representation'
+                                },
+                                body: JSON.stringify(data)
+                            });
+                            return { data: await res.json(), error: res.ok ? null : res.status };
+                        } catch (e) {
+                            return { data: null, error: e.message };
+                        }
+                    },
+                    delete: () => ({ eq: () => Promise.resolve({ data: [], error: null }) })
+                };
+            }
+        };
+
+        // ==================== 分类定义 ====================
         const categories = [
             { id: 'canyin', emoji: '🍔', name: '餐饮', type: 'expense' },
             { id: 'chaoshi', emoji: '🛒', name: '超市', type: 'expense' },
@@ -829,7 +860,7 @@
             });
         }
 
-        function submitTransaction() {
+        async function submitTransaction() {
             const type = document.getElementById('type-input').value;
             const amount = parseFloat(document.getElementById('amount-input').value);
             const date = document.getElementById('date-input').value;
@@ -858,6 +889,24 @@
                 createdAt: new Date().toISOString()
             };
 
+            // 保存到 Supabase (如果可用)
+            try {
+                await supabase.from('transactions').insert({
+                    type: transaction.type,
+                    amount: transaction.amount,
+                    currency: 'CNY',
+                    category: transaction.categoryName,
+                    merchant: transaction.merchant,
+                    date: transaction.date,
+                    payment_method: transaction.payment,
+                    description: transaction.description
+                });
+                console.log('✅ Saved to Supabase');
+            } catch (e) {
+                console.log('⚠️ Supabase failed, using LocalStorage');
+            }
+
+            // 始终保存到 LocalStorage 作为备份
             transactions.unshift(transaction);
             saveTransactions();
             loadTransactions();
@@ -882,7 +931,55 @@
             localStorage.setItem('family_finance_transactions', JSON.stringify(transactions));
         }
 
-        function loadTransactions() {
+        async function loadTransactions() {
+            // 尝试从 Supabase 加载
+            try {
+                const res = await fetch(
+                    `${SUPABASE_URL}/rest/v1/transactions?order=date.desc&order=created_at.desc`,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        }
+                    }
+                );
+                if (res.ok) {
+                    const supabaseData = await res.json();
+                    if (supabaseData && supabaseData.length > 0) {
+                        // 转换为本地格式
+                        const converted = supabaseData.map(t => ({
+                            id: t.id,
+                            type: t.type,
+                            amount: parseFloat(t.amount),
+                            date: t.date,
+                            merchant: t.merchant,
+                            category: t.category,
+                            categoryName: t.category,
+                            categoryEmoji: categories.find(c => c.name === t.category)?.emoji || '💰',
+                            payment: t.payment_method,
+                            description: t.description,
+                            createdAt: t.created_at
+                        }));
+                        // 合并数据（本地优先，避免重复）
+                        const localData = JSON.parse(localStorage.getItem('family_finance_transactions') || '[]');
+                        const merged = [...localData];
+                        converted.forEach(t => {
+                            if (!merged.find(m => m.id === t.id)) {
+                                merged.unshift(t);
+                            }
+                        });
+                        transactions = merged;
+                        saveTransactions();
+                        updateUI();
+                        console.log('✅ Loaded from Supabase:', supabaseData.length);
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.log('⚠️ Supabase load failed:', e.message);
+            }
+            
+            // 回退到 LocalStorage
             const stored = localStorage.getItem('family_finance_transactions');
             if (stored) {
                 transactions = JSON.parse(stored);
