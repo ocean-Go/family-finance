@@ -666,13 +666,25 @@
 
     <script>
         // ==================== GitHub 配置 ====================
+        // 使用方式：
+        // 1. 首次打开时，在浏览器控制台执行: localStorage.setItem('github_token', '你的token')
+        // 2. 或者访问: https://ocean-go.github.io/family-finance/?token=你的token
+        
+        const getToken = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token') || localStorage.getItem('github_token');
+        };
+        
         const GITHUB_CONFIG = {
             owner: 'ocean-Go',
             repo: 'family-finance',
             branch: 'master',
             dataFile: 'data.json',
-            token: '' // 可选：不填则只使用 LocalStorage
+            token: ''
         };
+        
+        // 自动加载 Token
+        GITHUB_CONFIG.token = getToken();
 
         // GitHub API 读写
         const githubDB = {
