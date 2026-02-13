@@ -86,13 +86,63 @@
 
 ---
 
-## 🛠️ 技术栈
+## 🗄️ 数据存储
 
-- **前端**: 原生 HTML5 + CSS3 + ES6+
-- **AI**: 关键词智能分析
-- **存储**: LocalStorage
-- **部署**: GitHub Pages
-- **PWA**: Manifest + Service Worker
+### Supabase 配置
+
+应用默认使用 **LocalStorage** 本地存储，并尝试同步到 **Supabase** 云端。
+
+#### 1. 在 Supabase 创建表
+
+在 Supabase SQL Editor 中执行：
+
+```sql
+-- 创建 transactions 表
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+    amount NUMERIC NOT NULL,
+    currency TEXT DEFAULT 'CNY',
+    category TEXT,
+    merchant TEXT,
+    date DATE NOT NULL,
+    payment_method TEXT,
+    description TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 启用 RLS
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+
+-- 创建公开读取策略
+CREATE POLICY "Allow public read" ON transactions
+    FOR SELECT USING (true);
+
+-- 创建公开写入策略
+CREATE POLICY "Allow public insert" ON transactions
+    FOR INSERT WITH CHECK (true);
+
+-- 创建公开删除策略
+CREATE POLICY "Allow public delete" ON transactions
+    FOR DELETE USING (true);
+```
+
+#### 2. 配置 API
+
+在 `index.html` 中更新 Supabase 配置：
+
+```javascript
+const SUPABASE_URL = 'your-supabase-url';
+const SUPABASE_KEY = 'your-anon-key';
+```
+
+### 本地优先策略
+
+应用采用**本地优先**架构：
+1. 数据先保存到 LocalStorage（立即可用）
+2. 尝试同步到 Supabase（后台进行）
+3. 如果 Supabase 失败，不影响本地使用
 
 ---
 
