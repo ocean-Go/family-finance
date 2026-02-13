@@ -88,61 +88,47 @@
 
 ## 🗄️ 数据存储
 
-### Supabase 配置
+### 存储层级 (本地优先)
 
-应用默认使用 **LocalStorage** 本地存储，并尝试同步到 **Supabase** 云端。
+| 优先级 | 存储 | 说明 |
+|--------|------|------|
+| 1️⃣ | LocalStorage | 浏览器本地，100%可靠 |
+| 2️⃣ | GitHub 仓库 | 云端备份，需配置 Token |
 
-#### 1. 在 Supabase 创建表
+### 配置 GitHub 同步 (可选)
 
-在 Supabase SQL Editor 中执行：
-
-```sql
--- 创建 transactions 表
-CREATE TABLE IF NOT EXISTS transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
-    amount NUMERIC NOT NULL,
-    currency TEXT DEFAULT 'CNY',
-    category TEXT,
-    merchant TEXT,
-    date DATE NOT NULL,
-    payment_method TEXT,
-    description TEXT,
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 启用 RLS
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-
--- 创建公开读取策略
-CREATE POLICY "Allow public read" ON transactions
-    FOR SELECT USING (true);
-
--- 创建公开写入策略
-CREATE POLICY "Allow public insert" ON transactions
-    FOR INSERT WITH CHECK (true);
-
--- 创建公开删除策略
-CREATE POLICY "Allow public delete" ON transactions
-    FOR DELETE USING (true);
-```
-
-#### 2. 配置 API
-
-在 `index.html` 中更新 Supabase 配置：
+免费！数据存到你自己的 GitHub 仓库：
 
 ```javascript
-const SUPABASE_URL = 'your-supabase-url';
-const SUPABASE_KEY = 'your-anon-key';
+// 在 index.html 中添加 Token
+const GITHUB_CONFIG = {
+    owner: 'ocean-Go',
+    repo: 'family-finance', 
+    branch: 'master',
+    dataFile: 'data.json',
+    token: 'ghp_xxxxxxxxxxxx' // GitHub Personal Access Token
+};
 ```
 
-### 本地优先策略
+#### 获取 Token 步骤：
 
-应用采用**本地优先**架构：
-1. 数据先保存到 LocalStorage（立即可用）
-2. 尝试同步到 Supabase（后台进行）
-3. 如果 Supabase 失败，不影响本地使用
+1. 打开 https://github.com/settings/tokens
+2. 点击 "Generate new token (classic)"
+3. 勾选 `repo` 权限
+4. 生成并复制 Token
+5. 粘贴到代码中
+
+#### 数据文件
+
+仓库中 `data.json` 文件会自动保存你的财务数据：
+- 交易记录
+- 最后更新时间
+
+#### 优点
+- ✅ 数据存在自己仓库
+- ✅ 有版本历史
+- ✅ 免费可靠
+- ✅ 无需额外服务
 
 ---
 
