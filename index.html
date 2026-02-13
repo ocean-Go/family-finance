@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>🏠 家庭财务管理</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a1a2e' width='180' height='180' rx='30'/><text x='90' y='130' font-size='100' text-anchor='middle'>💰</text></svg>">
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: rgba(255, 255, 255, 0.08);
+            --accent: #667eea;
+            --accent-secondary: #764ba2;
+            --income: #4ade80;
+            --expense: #f87171;
+            --text: #ffffff;
+            --text-muted: #a0a0a0;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            min-height: 100vh;
+            color: var(--text);
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .header .subtitle {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        /* Stats Cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 15px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 15px 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .stat-card.income .stat-value { color: var(--income); }
+        .stat-card.expense .stat-value { color: var(--expense); }
+        .stat-card.balance .stat-value { color: var(--accent); }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: var(--bg-card);
+            padding: 10px;
+            gap: 10px;
+            justify-content: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Content Sections */
+        .content {
+            padding: 15px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Upload Section */
+        .upload-area {
+            background: var(--bg-card);
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Input Form */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* Transaction List */
+        .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .transaction-item {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .transaction-icon {
+            font-size: 1.8rem;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-merchant {
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .transaction-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .transaction-amount {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .transaction-amount.income { color: var(--income); }
+        .transaction-amount.expense { color: var(--expense); }
+
+        /* Category Select */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .category-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+        }
+
+        .category-item:hover {
+            border-color: var(--accent);
+        }
+
+        .category-item.selected {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .category-emoji {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        /* Loading & Toast */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            color: var(--text);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success { background: var(--income); }
+        .toast.error { background: var(--expense); }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 15px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 3px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* Hidden file input */
+        #file-input {
+            display: none;
+        }
+
+        /* Analysis Section */
+        .analysis-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .analysis-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+
+        .progress-fill.income { background: var(--income); }
+        .progress-fill.expense { background: var(--expense); }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .category-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>💰 家庭财务管理</h1>
+        <div class="subtitle">智能识别 · 自动分类 · 清晰明了</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-card income">
+            <div class="stat-label">本月收入</div>
+            <div class="stat-value" id="total-income">¥0</div>
+        </div>
+        <div class="stat-card expense">
+            <div class="stat-label">本月支出</div>
+            <div class="stat-value" id="total-expense">¥0</div>
+        </div>
+        <div class="stat-card balance">
+            <div class="stat-label">本月结余</div>
+            <div class="stat-value" id="total-balance">¥0</div>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+        <button class="tab-btn active" data-tab="home">🏠 首页</button>
+        <button class="tab-btn" data-tab="add">➕ 添加</button>
+        <button class="tab-btn" data-tab="list">📋 记录</button>
+        <button class="tab-btn" data-tab="analysis">📊 分析</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <!-- Home Section -->
+        <div class="section active" id="home-section">
+            <div class="analysis-card">
+                <div class="analysis-title">
+                    <span>📊</span> 本月概况
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill expense" id="expense-progress" style="width: 0%"></div>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">
+                    支出占比: <span id="expense-percent">0%</span>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 15px;">📝 最近记录</h3>
+            <div class="transaction-list" id="recent-transactions">
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>暂无记录</p>
+                    <p style="font-size: 0.8rem; margin-top: 10px;">点击"添加"开始记录</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Section -->
+        <div class="section" id="add-section">
+            <!-- Upload Area -->
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">点击上传小票/收据/账单</div>
+                <div class="upload-hint">支持 JPG, PNG, PDF</div>
+            </div>
+            <input type="file" id="file-input" accept="image/*,.pdf">
+
+            <!-- Text Input -->
+            <div class="form-group">
+                <label class="form-label">📝 或手动输入描述</label>
+                <textarea class="form-textarea" id="description-input" rows="3" placeholder="例如：今天在超市买了128.5元的东西"></textarea>
+            </div>
+
+            <!-- AI Analyze Button -->
+            <button class="btn btn-primary" onclick="analyzeInput()">
+                🤖 AI 智能识别
+            </button>
+
+            <!-- Result Form (Hidden by default) -->
+            <div id="result-form" style="display: none; margin-top: 20px;">
+                <hr style="border-color: var(--border); margin: 20px 0;">
+                
+                <div class="form-group">
+                    <label class="form-label">类型</label>
+                    <select class="form-select" id="type-input">
+                        <option value="expense">💸 支出</option>
+                        <option value="income">💰 收入</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">金额</label>
+                        <input type="number" class="form-input" id="amount-input" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">日期</label>
+                        <input type="date" class="form-input" id="date-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">商家/描述</label>
+                    <input type="text" class="form-input" id="merchant-input" placeholder="例如：海底捞">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">支付方式</label>
+                    <select class="form-select" id="payment-input">
+                        <option value="微信">💚 微信</option>
+                        <option value="支付宝">💙 支付宝</option>
+                        <option value="现金">💵 现金</option>
+                        <option value="银行卡">💳 银行卡</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <div class="category-grid" id="category-grid">
+                        <!-- Categories will be generated by JS -->
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="submitTransaction()">
+                    ✅ 确认添加
+                </button>
+            </div>
+        </div>
+
+        <!-- List Section -->
+        <div class="section" id="list-section">
+            <div class="transaction-list" id="all-transactions">
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>暂无记录</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Section -->
+        <div class="section" id="analysis-section">
+            <div class="analysis-card">
+                <div class="analysis-title">
+                    <span>🍔</span> 支出分类
+                </div>
+                <div id="category-analysis">
+                    <p style="color: var(--text-muted);">暂无数据</p>
+                </div>
+            </div>
+
+            <div class="analysis-card">
+                <div class="analysis-title">
+                    <span>📈</span> 月度趋势
+                </div>
+                <div id="trend-analysis">
+                    <p style="color: var(--text-muted);">暂无数据</p>
+                </div>
+            </div>
+
+            <div class="analysis-card">
+                <div class="analysis-title">
+                    <span>💡</span> 智能建议
+                </div>
+                <div id="suggestions">
+                    <p style="color: var(--text-muted);">暂无建议</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active" data-tab="home">
+            <span class="nav-icon">🏠</span>
+            <span>首页</span>
+        </div>
+        <div class="nav-item" data-tab="add">
+            <span class="nav-icon">➕</span>
+            <span>添加</span>
+        </div>
+        <div class="nav-item" data-tab="list">
+            <span class="nav-icon">📋</span>
+            <span>记录</span>
+        </div>
+        <div class="nav-item" data-tab="analysis">
+            <span class="nav-icon">📊</span>
+            <span>分析</span>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">AI 识别中...</div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Categories
+        const categories = [
+            { id: 'canyin', emoji: '🍔', name: '餐饮', type: 'expense' },
+            { id: 'chaoshi', emoji: '🛒', name: '超市', type: 'expense' },
+            { id: 'jiaotong', emoji: '🚗', name: '交通', type: 'expense' },
+            { id: 'fangzu', emoji: '🏠', name: '房租', type: 'expense' },
+            { id: 'shuidian', emoji: '⚡', name: '水电', type: 'expense' },
+            { id: 'haizi', emoji: '👶', name: '孩子', type: 'expense' },
+            { id: 'yiliao', emoji: '💊', name: '医疗', type: 'expense' },
+            { id: 'yule', emoji: '🎬', name: '娱乐', type: 'expense' },
+            { id: 'gouwu', emoji: '📦', name: '购物', type: 'expense' },
+            { id: 'qita', emoji: '📝', name: '其他', type: 'expense' },
+            { id: 'shouru', emoji: '💰', name: '收入', type: 'income' },
+        ];
+
+        let transactions = [];
+        let selectedCategory = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCategories();
+            loadTransactions();
+            setupEventListeners();
+            setDefaultDate();
+        });
+
+        function initCategories() {
+            const grid = document.getElementById('category-grid');
+            grid.innerHTML = categories.map(cat => `
+                <div class="category-item" data-id="${cat.id}" data-type="${cat.type}" onclick="selectCategory('${cat.id}')">
+                    <span class="category-emoji">${cat.emoji}</span>
+                    ${cat.name}
+                </div>
+            `).join('');
+        }
+
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date-input').value = today;
+        }
+
+        function setupEventListeners() {
+            // Tab navigation
+            document.querySelectorAll('.tab-btn, .nav-item').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+            });
+
+            // Upload
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFile(e.dataTransfer.files[0]);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files[0]) handleFile(e.target.files[0]);
+            });
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn, .nav-item').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.toggle('active', section.id === `${tab}-section`);
+            });
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            showLoading('正在处理图片...');
+            
+            // For demo, just show the form (real implementation would upload to server)
+            setTimeout(() => {
+                hideLoading();
+                showToast('图片已上传，请填写描述信息', 'success');
+                document.getElementById('result-form').style.display = 'block';
+            }, 1000);
+        }
+
+        async function analyzeInput() {
+            const desc = document.getElementById('description-input').value.trim();
+            if (!desc) {
+                showToast('请输入描述', 'error');
+                return;
+            }
+
+            showLoading('🤖 AI 智能识别中...');
+
+            // Simulate AI analysis
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Simple keyword-based analysis
+            const result = analyzeText(desc);
+
+            // Fill form
+            document.getElementById('amount-input').value = result.amount || '';
+            document.getElementById('merchant-input').value = result.merchant || '';
+            document.getElementById('type-input').value = result.type || 'expense';
+            selectCategory(result.category || 'qita');
+
+            hideLoading();
+            document.getElementById('result-form').style.display = 'block';
+            showToast('识别完成，请确认信息', 'success');
+        }
+
+        function analyzeText(text) {
+            const result = { type: 'expense', category: 'qita' };
+            
+            // Keywords for type
+            if (text.includes('工资') || text.includes('收入') || text.includes('奖金') || text.includes('退款')) {
+                result.type = 'income';
+                result.category = 'shouru';
+            }
+
+            // Keywords for category
+            if (text.includes('吃饭') || text.includes('餐饮') || text.includes('餐厅') || text.includes('外卖') || text.includes('海底捞')) {
+                result.category = 'canyin';
+            } else if (text.includes('超市') || text.includes('沃尔玛') || text.includes('盒马')) {
+                result.category = 'chaoshi';
+            } else if (text.includes('打车') || text.includes('滴滴') || text.includes('地铁') || text.includes('公交') || text.includes('加油')) {
+                result.category = 'jiaotong';
+            } else if (text.includes('房租') || text.includes('租金')) {
+                result.category = 'fangzu';
+            } else if (text.includes('电费') || text.includes('水费') || text.includes('燃气') || text.includes('网费')) {
+                result.category = 'shuidian';
+            } else if (text.includes('孩子') || text.includes('学费') || text.includes('培训')) {
+                result.category = 'haizi';
+            } else if (text.includes('药') || text.includes('医院') || text.includes('医疗')) {
+                result.category = 'yiliao';
+            } else if (text.includes('电影') || text.includes('游戏') || text.includes('娱乐')) {
+                result.category = 'yule';
+            }
+
+            // Extract amount
+            const amountMatch = text.match(/(\d+\.?\d*)\s*[元¥¥]/);
+            if (amountMatch) {
+                result.amount = amountMatch[1];
+            } else {
+                const numMatch = text.match(/(\d+\.?\d*)/);
+                if (numMatch) result.amount = numMatch[1];
+            }
+
+            return result;
+        }
+
+        function selectCategory(catId) {
+            selectedCategory = catId;
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.toggle('selected', item.dataset.id === catId);
+            });
+        }
+
+        function submitTransaction() {
+            const type = document.getElementById('type-input').value;
+            const amount = parseFloat(document.getElementById('amount-input').value);
+            const date = document.getElementById('date-input').value;
+            const merchant = document.getElementById('merchant-input').value;
+            const payment = document.getElementById('payment-input').value;
+            const description = document.getElementById('description-input').value;
+
+            if (!amount || !date) {
+                showToast('请填写金额和日期', 'error');
+                return;
+            }
+
+            const category = categories.find(c => c.id === selectedCategory) || categories[0];
+
+            const transaction = {
+                id: Date.now(),
+                type,
+                amount,
+                date,
+                merchant: merchant || description.substring(0, 20),
+                category: category.id,
+                categoryName: category.name,
+                categoryEmoji: category.emoji,
+                payment,
+                description,
+                createdAt: new Date().toISOString()
+            };
+
+            transactions.unshift(transaction);
+            saveTransactions();
+            loadTransactions();
+            clearForm();
+            
+            showToast('✅ 添加成功！', 'success');
+            switchTab('home');
+        }
+
+        function clearForm() {
+            document.getElementById('description-input').value = '';
+            document.getElementById('amount-input').value = '';
+            document.getElementById('merchant-input').value = '';
+            document.getElementById('result-form').style.display = 'none';
+            selectedCategory = null;
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+        }
+
+        function saveTransactions() {
+            localStorage.setItem('family_finance_transactions', JSON.stringify(transactions));
+        }
+
+        function loadTransactions() {
+            const stored = localStorage.getItem('family_finance_transactions');
+            if (stored) {
+                transactions = JSON.parse(stored);
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            const now = new Date();
+            const thisMonth = transactions.filter(t => {
+                const d = new Date(t.date);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            });
+
+            const income = thisMonth.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+            const expense = thisMonth.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+            document.getElementById('total-income').textContent = `¥${income.toLocaleString()}`;
+            document.getElementById('total-expense').textContent = `¥${expense.toLocaleString()}`;
+            document.getElementById('total-balance').textContent = `¥${(income - expense).toLocaleString()}`;
+
+            const percent = income > 0 ? Math.round((expense / income) * 100) : 0;
+            document.getElementById('expense-percent').textContent = `${percent}%`;
+            document.getElementById('expense-progress').style.width = `${Math.min(percent, 100)}%`;
+
+            // Render recent transactions
+            const recent = transactions.slice(0, 5);
+            const recentEl = document.getElementById('recent-transactions');
+            
+            if (recent.length === 0) {
+                recentEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>暂无记录</p>
+                        <p style="font-size: 0.8rem; margin-top: 10px;">点击"添加"开始记录</p>
+                    </div>
+                `;
+            } else {
+                recentEl.innerHTML = recent.map(renderTransaction).join('');
+            }
+
+            // Render all transactions
+            const allEl = document.getElementById('all-transactions');
+            if (transactions.length === 0) {
+                allEl.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <p>暂无记录</p>
+                    </div>
+                `;
+            } else {
+                allEl.innerHTML = transactions.map(renderTransaction).join('');
+            }
+
+            // Update analysis
+            updateAnalysis();
+        }
+
+        function renderTransaction(t) {
+            return `
+                <div class="transaction-item">
+                    <div class="transaction-icon">${t.categoryEmoji || '💰'}</div>
+                    <div class="transaction-info">
+                        <div class="transaction-merchant">${t.merchant || t.description}</div>
+                        <div class="transaction-meta">${t.date} · ${t.payment}</div>
+                    </div>
+                    <div class="transaction-amount ${t.type}">
+                        ${t.type === 'income' ? '+' : '-'}¥${t.amount.toFixed(2)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateAnalysis() {
+            // Category breakdown
+            const expenses = transactions.filter(t => t.type === 'expense');
+            const categoryBreakdown = {};
+            
+            expenses.forEach(t => {
+                const cat = t.categoryName || '其他';
+                categoryBreakdown[cat] = (categoryBreakdown[cat] || 0) + t.amount;
+            });
+
+            const sorted = Object.entries(categoryBreakdown).sort((a, b) => b[1] - a[1]);
+            const total = expenses.reduce((sum, t) => sum + t.amount, 0);
+
+            const catAnalysis = document.getElementById('category-analysis');
+            if (sorted.length === 0) {
+                catAnalysis.innerHTML = '<p style="color: var(--text-muted);">暂无支出数据</p>';
+            } else {
+                catAnalysis.innerHTML = sorted.map(([cat, amount]) => {
+                    const percent = total > 0 ? Math.round((amount / total) * 100) : 0;
+                    return `
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                <span>${cat}</span>
+                                <span>¥${amount.toFixed(2)} (${percent}%)</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill expense" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Suggestions
+            const suggestions = document.getElementById('suggestions');
+            const suggestions_text = [];
+            
+            if (total > 5000) {
+                suggestions_text.push('⚠️ 本月支出已超过¥5000，注意控制消费');
+            }
+            if (categoryBreakdown['餐饮'] > 1000) {
+                suggestions_text.push('🍔 餐饮支出较高，可考虑减少外卖频率');
+            }
+            if (categoryBreakdown['娱乐'] > 500) {
+                suggestions_text.push('🎬 娱乐支出较大，注意适度消费');
+            }
+            
+            if (suggestions_text.length === 0) {
+                suggestions_text.push('✅ 财务状况良好，继续保持！');
+            }
+
+            suggestions.innerHTML = suggestions_text.map(s => `<p style="margin-bottom: 8px;">${s}</p>`).join('');
+        }
+
+        function showLoading(text = '加载中...') {
+            document.querySelector('.loading-text').textContent = text;
+            document.getElementById('loading').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
